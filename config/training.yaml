@@ -1,0 +1,80 @@
+training:
+  algorithm: MAPPO
+  n_episodes: 10000
+  episode_length: 1000           # Steps per episode
+  batch_size: 512
+  lr_actor: 3.0e-4
+  lr_critic: 1.0e-3
+  gamma: 0.99                    # Discount factor
+  lambda_gae: 0.95               # GAE lambda parameter
+  clip_epsilon: 0.2              # PPO clip parameter
+  entropy_coef: 0.01             # Entropy regularization coefficient
+  max_grad_norm: 0.5             # Gradient clipping threshold
+  n_epochs_per_update: 10        # Policy update epochs per rollout
+  rollout_length: 200            # Steps to collect before update
+  n_minibatches: 4               # Mini-batches per update epoch
+  device: auto                   # "cpu", "cuda", or "auto"
+
+  reward:
+    w_soc: 1.0                   # SoC reward weight
+    w_degradation: 0.5           # Degradation penalty weight
+    w_thermal: 0.3               # Thermal violation penalty weight
+    w_mission: 0.8               # Mission completion reward weight
+    alpha_local: 0.5             # Local reward blend coefficient
+    beta_global: 0.5             # Global reward blend coefficient
+    gamma_conflict: 0.2          # Conflict penalty coefficient
+
+  world_model:
+    hidden_dim: 256
+    n_layers: 3
+    predict_horizon: 5           # k-step lookahead
+    learning_rate: 1.0e-3
+    n_pretrain_epochs: 100
+    n_pretrain_samples: 100000
+    batch_size: 256
+    val_split: 0.1               # Fraction for validation
+    use_lstm: false              # Use LSTM (true) or MLP (false)
+
+  checkpointing:
+    save_dir: checkpoints/
+    save_every_n_episodes: 500
+    keep_best: true
+    metric: episode_reward
+
+  logging:
+    use_wandb: false
+    use_tensorboard: true
+    log_dir: runs/
+    log_every_n_steps: 100
+    project_name: casc-rl
+
+  curriculum:
+    stages:
+      - name: "single_nominal"
+        n_satellites: 1
+        enable_eclipse: false
+        n_episodes: 1000
+      - name: "single_eclipse"
+        n_satellites: 1
+        enable_eclipse: true
+        n_episodes: 2000
+      - name: "three_nominal"
+        n_satellites: 3
+        enable_eclipse: true
+        n_episodes: 2000
+      - name: "three_degradation"
+        n_satellites: 3
+        enable_eclipse: true
+        enable_degradation: true
+        n_episodes: 2000
+      - name: "six_stress"
+        n_satellites: 6
+        enable_eclipse: true
+        enable_degradation: true
+        n_episodes: 3000
+      - name: "twelve_adversarial"
+        n_satellites: 12
+        enable_eclipse: true
+        enable_degradation: true
+        adversarial: true
+        n_episodes: 5000

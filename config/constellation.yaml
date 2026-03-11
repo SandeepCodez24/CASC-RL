@@ -1,0 +1,69 @@
+constellation:
+  # Constellation size configurations
+  n_satellites: 3
+
+  # Orbital plane configuration
+  # Satellites distributed evenly in a Walker-Delta pattern
+  orbital_planes:
+    n_planes: 1
+    sats_per_plane: 3
+    phasing: 120.0            # degrees between satellites in same plane
+
+  # Per-satellite orbital parameters (override per-satellite below)
+  default_orbit:
+    semi_major_axis: 6778.0   # km
+    eccentricity: 0.0
+    inclination: 51.6         # degrees
+    raan: 0.0
+
+  # Explicit satellite definitions (3-satellite default)
+  satellites:
+    - id: 0
+      name: "CASC-1"
+      true_anomaly_0: 0.0     # degrees
+      raan: 0.0
+    - id: 1
+      name: "CASC-2"
+      true_anomaly_0: 120.0   # degrees
+      raan: 0.0
+    - id: 2
+      name: "CASC-3"
+      true_anomaly_0: 240.0   # degrees
+      raan: 0.0
+
+  # Inter-Satellite Links (ISL)
+  communication:
+    max_isl_range_km: 5000.0       # Maximum ISL communication distance
+    bandwidth_mbps: 10.0           # ISL bandwidth
+    propagation_delay_model: distance  # "distance" or "fixed"
+    fixed_delay_s: 0.05            # seconds (only if fixed model)
+    ground_station_interval_min: 15.0  # minutes between GS contacts
+
+  # Mission tasks available to the constellation
+  tasks:
+    - name: "earth_observation"
+      power_cost_w: 40.0
+      value: 1.0
+      duration_s: 300
+    - name: "data_relay"
+      power_cost_w: 20.0
+      value: 0.6
+      duration_s: 600
+    - name: "science_payload"
+      power_cost_w: 35.0
+      value: 0.9
+      duration_s: 500
+    - name: "emergency_relay"
+      power_cost_w: 25.0
+      value: 2.0              # High priority
+      duration_s: 120
+
+  # Constellation-level power budget
+  power_budget:
+    total_max_w: 200.0        # Max simultaneous constellation draw
+    reserve_fraction: 0.15   # 15% reserve
+
+  # Scaling experiments
+  scaling:
+    sizes: [3, 6, 12]
+    baseline_n: 3

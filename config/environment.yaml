@@ -1,0 +1,67 @@
+environment:
+  n_satellites: 3
+  orbital:
+    semi_major_axis: 6778.0   # km (400 km altitude LEO)
+    eccentricity: 0.0
+    inclination: 51.6         # degrees (ISS-like orbit)
+    raan: 0.0                 # Right Ascension of Ascending Node (degrees)
+    arg_perigee: 0.0          # Argument of perigee (degrees)
+    true_anomaly_0: 0.0       # Initial true anomaly (degrees)
+    dt: 10.0                  # seconds per simulation step
+    period: 92.0              # minutes (one orbit ~ 5520 seconds)
+
+  battery:
+    capacity_wh: 100.0        # Wh total capacity
+    soc_min: 0.15             # 15% minimum safe State of Charge
+    soc_max: 1.0              # 100% maximum
+    soc_initial: 0.8          # Starting charge level
+    SoH_initial: 1.0          # Starting State of Health
+    charge_efficiency: 0.95   # Charge path efficiency
+    discharge_efficiency: 0.92 # Discharge path efficiency
+    max_charge_rate_w: 50.0   # Watts maximum charging rate
+    max_discharge_rate_w: 80.0 # Watts maximum discharge rate
+
+  thermal:
+    T_nominal: 20.0           # Celsius nominal operating temperature
+    T_max: 60.0               # Safety limit (thermal shutdown above)
+    T_min: -20.0              # Safety limit (heater ON below)
+    T_initial: 20.0           # Initial temperature
+    mass_kg: 50.0             # Satellite mass (kg)
+    specific_heat: 900.0      # J/(kg·K) aluminum-equivalent
+    emissivity: 0.85          # Thermal emissivity (surface coating)
+    area_radiator: 0.5        # m² effective radiator area
+
+  solar:
+    panel_area: 2.0           # m² total solar panel area
+    efficiency: 0.28          # 28% triple-junction solar cells
+    solar_constant: 1361.0    # W/m² at 1 AU
+
+  power:
+    payload_power_w: 40.0     # Watts when payload is active
+    relay_power_w: 20.0       # Watts in relay mode
+    hibernate_power_w: 5.0    # Watts in hibernation
+    charge_only_power_w: 3.0  # Watts baseload while charging
+
+  actions:
+    # Discrete action space
+    # 0: payload_ON, 1: payload_OFF, 2: hibernate, 3: relay_mode, 4: charge_priority
+    n_actions: 5
+    action_names:
+      - "payload_ON"
+      - "payload_OFF"
+      - "hibernate"
+      - "relay_mode"
+      - "charge_priority"
+
+  observation:
+    # State vector components
+    dims: 8
+    components:
+      - "SoC"            # State of Charge [0,1]
+      - "SoH"            # State of Health [0,1]
+      - "temperature"    # Celsius (normalized)
+      - "solar_input"    # Watts (normalized)
+      - "orbital_phase"  # [0, 2π]
+      - "eclipse_flag"   # Binary 0/1
+      - "power_consumption" # Watts (normalized)
+      - "comm_delay"     # seconds to nearest neighbor
