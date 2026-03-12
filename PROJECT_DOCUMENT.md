@@ -655,7 +655,7 @@ def solve_allocation(forecasts, power_budget, comm_constraints):
 - Local broadcast vs. ground relay communication modes
 
 **Deliverables:**
-- Full hierarchical system tested on 6-satellite constellation
+- Full hierarchical system tested on 12-satellite constellation
 - Task allocation demo: correct assignment with power constraints
 - Schedule visualization for one full orbit
 
