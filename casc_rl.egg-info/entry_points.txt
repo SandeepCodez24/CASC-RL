@@ -1,0 +1,4 @@
+[console_scripts]
+casc-dashboard = visualization.dashboard:main
+casc-eval = evaluation.experiment_runner:main
+casc-train = training.train_marl:main
