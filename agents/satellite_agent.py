@@ -44,6 +44,16 @@ ACTION_NAMES = {
     4: "charge_priority",
 }
 
+# ----- Algorithm 4 reward weights (doc: w1=1.0, w2=0.5, w3=0.3) -----
+# Index positions in the 8-dim observation vector (must match constellation_env.py)
+_IDX_SOC  = 0   # State of Charge
+_IDX_SOH  = 1   # State of Health
+_IDX_TEMP = 2   # Temperature (normalized: raw_C / 100)
+# w1·SoC  − w2·degradation_rate  − w3·thermal_risk
+W1_SOC   = 1.0
+W2_DEGRAD = 0.5
+W3_THERMAL = 0.3
+
 
 class SatelliteAgent:
     """
@@ -209,6 +219,129 @@ class SatelliteAgent:
             "value":           value,
         }
         return safe_action, log_prob, value, info
+
+    # ------------------------------------------------------------------
+    # Algorithm 4  —  Explicit Cognitive Decision (Model-Predictive Control)
+    # ------------------------------------------------------------------
+
+    def cognitive_decision(
+        self,
+        obs:           np.ndarray,
+        k:             int  = 5,
+        verbose:       bool = False,
+    ) -> Tuple[int, "Dict[str, Any]"]:
+        """
+        Implement Algorithm 4 from the project document exactly:
+
+            For each candidate action a in {0..4}:
+                s_future = world_model.predict_k_steps(s_t, [a]*k, k)
+                score    = w1·SoC − w2·degradation_rate − w3·thermal_risk
+            best_action = argmax(score)
+            safe_action = safety_gate.filter(best_action, s_t)
+
+        This is the explicit Model-Predictive Control (MPC) loop described
+        in Algorithm 4.  Unlike act() which relies on the learned ActorNetwork,
+        this path is fully transparent — every score is computed analytically
+        from world model rollouts and the documented reward weights.
+
+        Reward weights (project document, Algorithm 4):
+            w1 = 1.0  (SoC — maximize battery state)
+            w2 = 0.5  (degradation rate — minimize wear)
+            w3 = 0.3  (thermal risk — minimize overheating)
+
+        Args:
+            obs     : current observation, shape (OBS_DIM,) — normalized
+            k       : world model rollout horizon steps (default 5)
+            verbose : log per-action scores to logger
+
+        Returns:
+            safe_action (int)  : best MPC action after safety filter
+            info        (dict) : {scores, best_raw_action, best_score,
+                                  was_overridden, override_reason, s_futures}
+        """
+        self._step += 1
+
+        candidate_actions = list(range(N_ACTIONS))   # [0, 1, 2, 3, 4]
+        scores:    Dict[int, float] = {}
+        s_futures: Dict[int, list]  = {}
+
+        # ---- Step 1-2: Rollout and score each candidate action --------
+        for a_candidate in candidate_actions:
+            action_seq    = [a_candidate] * k
+            future_states = self.world_model.predict_k_steps(
+                s_t=obs, actions=action_seq, k=k
+            )
+            s_futures[a_candidate] = future_states
+
+            # Score the terminal predicted state (k-th step)
+            s_k = future_states[-1]   # shape (OBS_DIM,)
+            scores[a_candidate] = self._score_future_state(obs, s_k)
+
+        # ---- Step 3: Select best scoring action -----------------------
+        best_action = max(scores, key=lambda a: scores[a])
+        best_score  = scores[best_action]
+
+        if verbose:
+            score_str = " | ".join(
+                f"{ACTION_NAMES[a]}={scores[a]:.4f}" for a in candidate_actions
+            )
+            logger.debug(
+                f"[SAT-{self.agent_id}] MPC scores: {score_str} "
+                f"→ best={ACTION_NAMES[best_action]} (score={best_score:.4f})"
+            )
+
+        # ---- Step 4: Apply safety filter ------------------------------
+        safe_action, was_overridden, reason = self.action_selector.select(
+            policy_action=best_action,
+            obs=obs,
+            verbose=verbose,
+        )
+
+        if was_overridden:
+            self._override_count += 1
+
+        if verbose:
+            logger.debug(
+                f"[SAT-{self.agent_id}] MPC final: {ACTION_NAMES[safe_action]} "
+                f"(override={was_overridden}, reason={reason})"
+            )
+
+        info = {
+            "scores":           scores,
+            "best_raw_action":  best_action,
+            "best_score":       best_score,
+            "was_overridden":   was_overridden,
+            "override_reason":  reason,
+            "s_futures":        s_futures,
+        }
+        return safe_action, info
+
+    @staticmethod
+    def _score_future_state(s_t: np.ndarray, s_future: np.ndarray) -> float:
+        """
+        Compute the Algorithm 4 scalar score for a predicted future state.
+
+        Score = w1·SoC(future) − w2·ΔSoH − w3·thermal_risk(future)
+
+        Weights (project document, Algorithm 4):
+            w1=1.0, w2=0.5, w3=0.3
+
+        Args:
+            s_t     : current observation, shape (OBS_DIM,)
+            s_future: terminal predicted state, shape (OBS_DIM,)
+
+        Returns:
+            float: scalar score (higher = better action)
+        """
+        soc_future   = float(s_future[_IDX_SOC])
+        soh_loss     = float(max(0.0, s_t[_IDX_SOH] - s_future[_IDX_SOH]))  # degradation
+        thermal_risk = float(s_future[_IDX_TEMP])   # normalized temp: 0=cold, 1=T_max
+
+        return (
+            W1_SOC     * soc_future
+            - W2_DEGRAD  * soh_loss
+            - W3_THERMAL * thermal_risk
+        )
 
     # ------------------------------------------------------------------
     # Layer 4 interface

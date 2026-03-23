@@ -51,6 +51,11 @@ POWER_BY_MODE = {
 # State dimension
 OBS_DIM = 8   # SoC, SoH, T, P_solar, phase, eclipse, P_consumed, comm_delay
 
+# Speed of light — for ISL propagation delay computation
+SPEED_OF_LIGHT = 2.998e8   # m/s
+# Maximum expected inter-satellite range (~2 × orbit altitude for LEO at 400 km)
+MAX_ISL_RANGE_M = 8000e3   # 8000 km — for normalization
+
 
 class SatelliteState:
     """Container for a single satellite's physical state."""
@@ -94,9 +99,16 @@ class SatelliteState:
         # Injected anomalies
         self._anomalies: Dict[str, Any] = {}
 
-    def get_obs(self, t: float, sun_vector=None) -> np.ndarray:
+    def get_obs(self, t: float, sun_vector=None, all_positions=None) -> np.ndarray:
         """
         Build observation vector for this satellite.
+
+        Args:
+            t            : elapsed simulation time in seconds
+            sun_vector   : ECI unit vector from Earth to Sun (optional)
+            all_positions: list of ECI position arrays for all satellites in
+                           the constellation (used for comm_delay computation);
+                           if None, a placeholder delay is used.
 
         Returns:
             np.ndarray: shape (OBS_DIM,)
@@ -110,8 +122,12 @@ class SatelliteState:
         eclipse_state = self.eclipse.check_eclipse(pos, sun_vector)
         ef = eclipse_state.eclipse_fraction
 
-        # Solar power
-        p_solar = self.solar.compute_solar_power(ef)
+        # Solar power — pass satellite ECI position for cos(θ) computation
+        p_solar = self.solar.compute_solar_power(
+            eclipse_fraction=ef,
+            sun_vector_eci=sun_vector,
+            satellite_pos_eci=pos,
+        )
 
         # Apply anomalies
         if "solar_degradation" in self._anomalies:
@@ -123,8 +139,14 @@ class SatelliteState:
         T = self.thermal.temperature_c
         p_consumed = self.p_consumed
 
-        # Comm delay: approximate as function of sat_id (placeholder)
-        comm_delay = 0.05 * (self.sat_id + 1)
+        # ----------------------------------------------------------------
+        # Comm delay: physics-based ISL propagation delay.
+        # Computed as mean propagation delay to all other satellites:
+        #   delay_i = mean_j( ||pos_i - pos_j|| / c )
+        # Normalized to [0, 1] using MAX_ISL_RANGE_M as reference.
+        # Falls back to positional placeholder if positions unavailable.
+        # ----------------------------------------------------------------
+        comm_delay = self._compute_comm_delay(pos, all_positions)
 
         obs = np.array([
             soc,
@@ -134,10 +156,50 @@ class SatelliteState:
             phase / (2 * np.pi),             # [0,1]
             float(ef > 0.5),                 # Binary eclipse flag
             p_consumed / 80.0,               # Normalize: ÷80W
-            comm_delay,
+            comm_delay,                      # [0, 1] normalized ISL delay
         ], dtype=np.float32)
 
         return obs
+
+    def _compute_comm_delay(
+        self,
+        own_pos: np.ndarray,
+        all_positions,
+    ) -> float:
+        """
+        Compute normalized mean ISL propagation delay to all other satellites.
+
+        Delay model: propagation delay = distance / speed_of_light
+        Normalized to [0, 1] using MAX_ISL_RANGE_M as reference scale.
+
+        Args:
+            own_pos      : ECI position of this satellite (m), shape (3,)
+            all_positions: list of ECI position arrays for all sats,
+                           or None if not yet available.
+
+        Returns:
+            float: normalized comm delay [0, 1]
+        """
+        if all_positions is None or len(all_positions) <= 1:
+            # Fallback: use sat_id-based placeholder (proportional to spacing)
+            return float(np.clip(0.05 * (self.sat_id + 1), 0.0, 1.0))
+
+        delays = []
+        for other_pos in all_positions:
+            if other_pos is None:
+                continue
+            dist_m = float(np.linalg.norm(own_pos - np.asarray(other_pos)))
+            if dist_m < 1.0:
+                continue  # skip self
+            # Propagation delay (seconds) = range / c
+            delay_s = dist_m / SPEED_OF_LIGHT
+            # Normalize: 1.0 = delay at MAX_ISL_RANGE_M
+            delay_norm = delay_s / (MAX_ISL_RANGE_M / SPEED_OF_LIGHT)
+            delays.append(float(np.clip(delay_norm, 0.0, 1.0)))
+
+        if not delays:
+            return 0.0
+        return float(np.mean(delays))
 
 
 class ConstellationEnv(gym.Env):
@@ -247,11 +309,15 @@ class ConstellationEnv(gym.Env):
             sat.mode = int(action)
             sat.p_consumed = POWER_BY_MODE[sat.mode]
 
-            # Compute solar power
+            # Compute solar power — pass satellite ECI position for cos(θ)
             pos, _ = sat.orbit.propagate(self.t)
             eclipse_state = sat.eclipse.check_eclipse(pos, self._sun_vector)
             ef = eclipse_state.eclipse_fraction if self.enable_eclipse else 0.0
-            p_solar = sat.solar.compute_solar_power(ef)
+            p_solar = sat.solar.compute_solar_power(
+                eclipse_fraction=ef,
+                sun_vector_eci=self._sun_vector,
+                satellite_pos_eci=pos,
+            )
 
             # Apply anomalies
             if "solar_degradation" in sat._anomalies:
@@ -288,8 +354,17 @@ class ConstellationEnv(gym.Env):
 
     def _get_obs(self) -> np.ndarray:
         """Stacked observation array for all satellites."""
+        # Collect all current ECI positions for comm_delay computation
+        all_positions = []
+        for sat in self.satellites:
+            pos, _ = sat.orbit.propagate(self.t)
+            all_positions.append(pos)
+
         return np.stack(
-            [sat.get_obs(self.t, self._sun_vector) for sat in self.satellites],
+            [
+                sat.get_obs(self.t, self._sun_vector, all_positions)
+                for sat in self.satellites
+            ],
             axis=0,
         ).astype(np.float32)
 
