@@ -113,7 +113,7 @@ def main() -> None:
 
     # ── Step 3: Build agents ──────────────────────────────────────────────────
     actors = [
-        ActorNetwork(obs_dim=obs_dim, future_dim=obs_dim, action_dim=action_dim)
+        ActorNetwork(state_dim=obs_dim, n_actions=action_dim)
         for _ in range(args.n_satellites)
     ]
     centralized_critic = CentralizedCriticNetwork(
@@ -121,31 +121,37 @@ def main() -> None:
         state_dim=obs_dim,
     )
 
-    agents = [
-        SatelliteAgent(
+    agents = []
+    for i in range(args.n_satellites):
+        agent = SatelliteAgent.make(
             agent_id=i,
-            world_model=world_model,
-            actor=actors[i],
-            obs_dim=obs_dim,
+            predict_k=5,
+            device=device,
         )
-        for i in range(args.n_satellites)
-    ]
+        # Inject the shared pre-trained world model and the pre-built actor
+        agent.world_model = world_model
+        agent.actor = actors[i].to(torch.device(device))
+        agents.append(agent)
 
     # ── Step 4: Build reward shaper ───────────────────────────────────────────
+    # CooperativeRewardShaper accepts n_agents + an optional CoopRewardWeights object.
+    # Custom weights are passed via CoopRewardWeights, not as direct kwargs.
+    from marl.cooperative_rewards import CoopRewardWeights
     reward_shaper = CooperativeRewardShaper(
         n_agents=args.n_satellites,
-        alpha=0.5,
-        beta=0.5,
-        gamma=0.2,
+        weights=CoopRewardWeights(alpha=0.5, beta=0.5, gamma=0.2, delta=0.1),
     )
 
     # ── Step 5: Build MAPPO trainer ───────────────────────────────────────────
+    # MAPPOTrainer uses n_agents (not n_satellites), episode_length (not rollout_length),
+    # world_model as a positional kwarg, and has no reward_shaper param (shaper is
+    # instantiated internally). The custom reward_shaper is injected after construction.
     trainer = MAPPOTrainer(
+        n_agents=args.n_satellites,
         env=env,
         actors=actors,
         critic=centralized_critic,
-        reward_shaper=reward_shaper,
-        n_satellites=args.n_satellites,
+        world_model=world_model,
         device=device,
         lr_actor=args.lr_actor,
         lr_critic=args.lr_critic,
@@ -153,11 +159,13 @@ def main() -> None:
         lam=args.lam,
         clip_epsilon=args.clip_epsilon,
         entropy_coef=args.entropy_coef,
-        rollout_length=args.rollout_length,
+        episode_length=args.episode_length,
         n_epochs=args.n_epochs,
         batch_size=args.batch_size,
         checkpoint_dir=args.checkpoint_dir,
     )
+    # Inject the custom cooperative reward shaper (overrides the default one)
+    trainer.shaper = reward_shaper
 
     # ── Step 6: Training loop ─────────────────────────────────────────────────
     os.makedirs(args.checkpoint_dir, exist_ok=True)
@@ -168,7 +176,7 @@ def main() -> None:
     t_start = time.time()
 
     for episode in range(1, args.n_episodes + 1):
-        ep_reward = trainer.run_episode(episode_length=args.episode_length)
+        ep_reward, _, _, _ = trainer.train_episode()
         episode_rewards.append(ep_reward)
 
         if episode % args.log_every == 0:
@@ -183,17 +191,18 @@ def main() -> None:
 
         # Save checkpoint
         if episode % args.save_every == 0:
-            path = os.path.join(args.checkpoint_dir, f"mappo_ep{episode}.pt")
-            trainer.save(path)
-            logger.info(f"Checkpoint saved: {path}")
+            trainer._episode = episode
+            trainer.save_checkpoint(suffix=f"ep{episode}")
 
         # Track best
         if ep_reward > best_reward:
             best_reward = ep_reward
-            trainer.save(os.path.join(args.checkpoint_dir, "mappo_best.pt"))
+            trainer._episode = episode
+            trainer.save_checkpoint(suffix="best")
 
     # Final save
-    trainer.save(os.path.join(args.checkpoint_dir, "mappo_final.pt"))
+    trainer._episode = args.n_episodes
+    trainer.save_checkpoint(suffix="final")
     logger.success(
         f"MARL training complete! Best episode reward: {best_reward:.3f} | "
         f"Total time: {(time.time()-t_start)/60:.1f} min"

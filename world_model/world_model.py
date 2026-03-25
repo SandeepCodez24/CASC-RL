@@ -285,7 +285,7 @@ class WorldModel:
 
     def load(self, path: str, map_location: Optional[str] = None) -> None:
         """Load network weights and normalizer from a .pt file."""
-        ckpt = torch.load(path, map_location=map_location or str(self.device))
+        ckpt = torch.load(path, map_location=map_location or str(self.device), weights_only=False)
         self.network.load_state_dict(ckpt["network"])
         self.state_normalizer.load_state_dict(ckpt["state_normalizer"])
         self.is_fitted = ckpt.get("is_fitted", False)
