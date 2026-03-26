@@ -69,6 +69,8 @@ def run_casc_rl_episodes(
     from world_model.world_model import WorldModel
     from agents.satellite_agent import SatelliteAgent
     from agents.policy_network import ActorNetwork
+    from agents.critic_network import CriticNetwork
+    from agents.action_selector import ActionSelector
 
     device = "cpu"
 
@@ -79,18 +81,36 @@ def run_casc_rl_episodes(
     else:
         logger.warning("No world model checkpoint — using untrained model.")
 
-    actors = [ActorNetwork(obs_dim=8, future_dim=8, action_dim=5) for _ in range(n_satellites)]
+    actors  = [ActorNetwork(state_dim=8, n_actions=5, predict_k=5) for _ in range(n_satellites)]
+    critics = [CriticNetwork(state_dim=8) for _ in range(n_satellites)]
+    selectors = [ActionSelector(agent_id=i) for i in range(n_satellites)]
+
     if os.path.exists(checkpoint_path):
         ckpt = torch.load(checkpoint_path, map_location=device)
+        # Handle both list-of-actors and centralized-critic schemas
+        if "actors" in ckpt:
+            for i, sd in enumerate(ckpt["actors"]):
+                if i < len(actors): actors[i].load_state_dict(sd)
+        
+        # If the checkpoint is from the curriculum trainer (list mapping)
         for i, actor in enumerate(actors):
             key = f"actor_{i}"
             if key in ckpt:
                 actor.load_state_dict(ckpt[key])
-        logger.info(f"Actors loaded from {checkpoint_path}")
+        logger.info(f"Agents loaded from {checkpoint_path}")
     else:
-        logger.warning("No actor checkpoint — using random policy.")
+        logger.warning("No agent checkpoint — using random policy.")
 
-    agents  = [SatelliteAgent(agent_id=i, world_model=wm, actor=actors[i]) for i in range(n_satellites)]
+    agents  = [
+        SatelliteAgent(
+            agent_id=i, 
+            actor=actors[i], 
+            critic=critics[i], 
+            world_model=wm, 
+            action_selector=selectors[i]
+        ) 
+        for i in range(n_satellites)
+    ]
     algo    = "CASC-RL-MPC" if use_mpc else "CASC-RL"
     results = []
 
@@ -117,8 +137,8 @@ def run_casc_rl_episodes(
                         result.safety_override_steps.append(step)
                 actions.append(action)
 
-            next_obs, rewards, done, trunc, _ = env.step(np.array(actions))
-            step_reward = float(sum(rewards))
+            next_obs, rewards, terminated, truncated, info = env.step(actions)
+            step_reward = float(rewards)
 
             result.total_reward      += step_reward
             result.reward_trajectory.append(step_reward)
@@ -134,7 +154,7 @@ def run_casc_rl_episodes(
 
             result.episode_length = step + 1
             obs = next_obs
-            if done or trunc:
+            if terminated or truncated:
                 break
 
         if verbose:

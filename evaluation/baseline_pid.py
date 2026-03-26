@@ -234,7 +234,7 @@ def run_pid_episodes(
             actions = policy.select_actions(obs)
             next_obs, rewards, terminated, truncated, info = env.step(actions)
 
-            step_reward = float(sum(rewards))
+            step_reward = float(rewards)
             result.total_reward      += step_reward
             result.reward_trajectory.append(step_reward)
             result.soc_trajectory.append(next_obs[:, IDX_SOC].copy())

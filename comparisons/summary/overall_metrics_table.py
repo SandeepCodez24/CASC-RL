@@ -42,12 +42,12 @@ MOCK_TABLE = {
 }
 
 METRIC_HEADERS = [
-    ("Epi. Reward", "reward",       "↑", "{:.3f} ± {:.3f}"),
-    ("Success (%)",  "success_pct",  "↑", "{:.1f} ± {:.1f}"),
-    ("Min SoC",      "soc_min",      "↑", "{:.3f} ± {:.3f}"),
-    ("ΔSoH/ep",      "soh_degrad",   "↓", "{:.4f} ± {:.4f}"),
-    ("Therm. Viol.", "thermal_viol", "↓", "{:.1f} ± {:.1f}"),
-    ("Life. (k ep)", "lifetime_k",   "↑", "{:.1f} ± {:.1f}"),
+    ("Epi. Reward", "reward",       "(+)", "{:.3f} ± {:.3f}"),
+    ("Success (%)",  "success_pct",  "(+)", "{:.1f} ± {:.1f}"),
+    ("Min SoC",      "soc_min",      "(+)", "{:.3f} ± {:.3f}"),
+    ("ΔSoH/ep",      "soh_degrad",   "(-)", "{:.4f} ± {:.4f}"),
+    ("Therm. Viol.", "thermal_viol", "(-)", "{:.1f} ± {:.1f}"),
+    ("Life. (k ep)", "lifetime_k",   "(+)", "{:.1f} ± {:.1f}"),
 ]
 
 
@@ -109,8 +109,10 @@ def generate_latex_table(table: dict, n_satellites: int = 3) -> str:
         rf"\begin{{tabular}}{{{cols}}}",
         r"\toprule",
     ]
-    header_cells = ["\\textbf{Algorithm}"] + \
-                   [f"\\textbf{{{h}}} {d}" for h, _, d, _ in METRIC_HEADERS]
+    header_cells = ["\\textbf{Algorithm}"]
+    for h, _, d, _ in METRIC_HEADERS:
+        latex_arrow = r"$\uparrow$" if d == "(+)" else r"$\downarrow$"
+        header_cells.append(f"\\textbf{{{h}}} {latex_arrow}")
     lines.append(" & ".join(header_cells) + r" \\")
     lines.append(r"\midrule")
 

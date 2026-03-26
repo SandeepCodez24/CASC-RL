@@ -1,0 +1,74 @@
+{
+  "algorithm": "CASC-RL",
+  "n_seeds": 20,
+  "n_satellites": 3,
+  "battery": {
+    "soc_mean_min": {
+      "mean": 0.5467819571495056,
+      "std": 0.0,
+      "min": 0.5467819571495056,
+      "max": 0.5467819571495056
+    },
+    "soc_stability_std": {
+      "mean": 0.03529331460595131,
+      "std": 0.0,
+      "min": 0.03529331460595131,
+      "max": 0.03529331460595131
+    },
+    "soh_final": {
+      "mean": 0.9999885559082031,
+      "std": 0.0,
+      "min": 0.9999885559082031,
+      "max": 0.9999885559082031
+    },
+    "battery_lifetime_est_episodes": 26214.400000000005,
+    "dod_mean": {
+      "mean": 0.33212071657180786,
+      "std": 0.0,
+      "min": 0.33212071657180786,
+      "max": 0.33212071657180786
+    }
+  },
+  "mission": {
+    "mission_success_rate": {
+      "mean": NaN,
+      "std": NaN,
+      "min": NaN,
+      "max": NaN
+    },
+    "tasks_per_orbit": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "coordination_eff": {
+      "mean": 1.0,
+      "std": 0.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "reward_mean": 1552.1508099256214,
+    "reward_std": 2.2737367544323206e-13,
+    "reward_max": 1552.1508099256216
+  },
+  "safety": {
+    "thermal_violations_per_ep": 0.0,
+    "soc_critical_events_per_ep": 0.0,
+    "safety_override_rate": 0.0,
+    "recovery_success_rate": 1.0
+  },
+  "learning": {
+    "reward_step_mean": 1.5521508099256198,
+    "reward_step_std": 0.030495839201860123,
+    "reward_stability_last20pct": 0.023044098559891448,
+    "convergence_step": 0,
+    "peak_step_reward": 1.6129039086646313
+  },
+  "meta": {
+    "n_episodes": 20,
+    "mean_episode_length": 1000.0,
+    "algorithm": "CASC-RL",
+    "n_satellites": 3
+  }
+}

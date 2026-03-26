@@ -1,0 +1,74 @@
+{
+  "algorithm": "RuleBasedScheduler",
+  "n_seeds": 20,
+  "n_satellites": 3,
+  "battery": {
+    "soc_mean_min": {
+      "mean": 0.6777889132499695,
+      "std": 0.0,
+      "min": 0.6777889132499695,
+      "max": 0.6777889132499695
+    },
+    "soc_stability_std": {
+      "mean": 0.0319397933781147,
+      "std": 0.0,
+      "min": 0.0319397933781147,
+      "max": 0.0319397933781147
+    },
+    "soh_final": {
+      "mean": 0.9999889731407166,
+      "std": 0.0,
+      "min": 0.9999889731407166,
+      "max": 0.9999889731407166
+    },
+    "battery_lifetime_est_episodes": 27206.29621621622,
+    "dod_mean": {
+      "mean": 0.23762552440166473,
+      "std": 0.0,
+      "min": 0.23762552440166473,
+      "max": 0.23762552440166473
+    }
+  },
+  "mission": {
+    "mission_success_rate": {
+      "mean": NaN,
+      "std": NaN,
+      "min": NaN,
+      "max": NaN
+    },
+    "tasks_per_orbit": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "coordination_eff": {
+      "mean": 0.3316666666666667,
+      "std": 5.551115123125783e-17,
+      "min": 0.33166666666666667,
+      "max": 0.33166666666666667
+    },
+    "reward_mean": 1047.4419906632468,
+    "reward_std": 0.0,
+    "reward_max": 1047.4419906632468
+  },
+  "safety": {
+    "thermal_violations_per_ep": 0.0,
+    "soc_critical_events_per_ep": 0.0,
+    "safety_override_rate": 0.0,
+    "recovery_success_rate": 1.0
+  },
+  "learning": {
+    "reward_step_mean": 1.047441990663247,
+    "reward_step_std": 0.03191084305870777,
+    "reward_stability_last20pct": 0.02293252978365777,
+    "convergence_step": 17,
+    "peak_step_reward": 1.0946450140894821
+  },
+  "meta": {
+    "n_episodes": 20,
+    "mean_episode_length": 1000.0,
+    "algorithm": "RuleBasedScheduler",
+    "n_satellites": 3
+  }
+}

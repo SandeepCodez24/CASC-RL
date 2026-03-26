@@ -1,0 +1,74 @@
+{
+  "algorithm": "PID_Controller",
+  "n_seeds": 20,
+  "n_satellites": 3,
+  "battery": {
+    "soc_mean_min": {
+      "mean": 0.6787071824073792,
+      "std": 0.0,
+      "min": 0.6787071824073792,
+      "max": 0.6787071824073792
+    },
+    "soc_stability_std": {
+      "mean": 0.03748227283358574,
+      "std": 0.0,
+      "min": 0.03748227283358574,
+      "max": 0.03748227283358574
+    },
+    "soh_final": {
+      "mean": 0.9999892115592957,
+      "std": 0.0,
+      "min": 0.9999892115592957,
+      "max": 0.9999892115592957
+    },
+    "battery_lifetime_est_episodes": 27807.540331491717,
+    "dod_mean": {
+      "mean": 0.2367498278617859,
+      "std": 0.0,
+      "min": 0.2367498278617859,
+      "max": 0.2367498278617859
+    }
+  },
+  "mission": {
+    "mission_success_rate": {
+      "mean": NaN,
+      "std": NaN,
+      "min": NaN,
+      "max": NaN
+    },
+    "tasks_per_orbit": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "coordination_eff": {
+      "mean": 0.0,
+      "std": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "reward_mean": 799.7853478728373,
+    "reward_std": 1.1368683772161603e-13,
+    "reward_max": 799.7853478728372
+  },
+  "safety": {
+    "thermal_violations_per_ep": 0.0,
+    "soc_critical_events_per_ep": 0.0,
+    "safety_override_rate": 0.0,
+    "recovery_success_rate": 1.0
+  },
+  "learning": {
+    "reward_step_mean": 0.7997853478728373,
+    "reward_step_std": 0.029427726953653224,
+    "reward_stability_last20pct": 0.0036109627469696906,
+    "convergence_step": 22,
+    "peak_step_reward": 0.8361746984180147
+  },
+  "meta": {
+    "n_episodes": 20,
+    "mean_episode_length": 1000.0,
+    "algorithm": "PID_Controller",
+    "n_satellites": 3
+  }
+}

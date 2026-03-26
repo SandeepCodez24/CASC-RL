@@ -1,0 +1,20 @@
+{
+  "CASC-RL_vs_PID_Controller": {
+    "t_stat": 1.2900616426190486e+16,
+    "p_value": 0.0,
+    "significant": true,
+    "effect_size_cohens_d": 637730435737637.9
+  },
+  "CASC-RL_vs_RuleBasedScheduler": {
+    "t_stat": 9675591225720802.0,
+    "p_value": 4.754862584535651e-293,
+    "significant": true,
+    "effect_size_cohens_d": 434802391738636.75
+  },
+  "CASC-RL_vs_CASC-RL-MPC": {
+    "t_stat": 1.430847370621306e+16,
+    "p_value": 2.8102037755184437e-296,
+    "significant": true,
+    "effect_size_cohens_d": 642995187007537.4
+  }
+}

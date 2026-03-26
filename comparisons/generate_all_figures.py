@@ -51,7 +51,8 @@ def main() -> None:
         ("comparisons.safety.fault_recovery_comparison",         "plot_fault_recovery",          kw),
         # World Model
         ("comparisons.world_model.prediction_accuracy_comparison","plot_prediction_accuracy",
-            {**kw, "wm_path": "checkpoints/world_model_best.pt"}),
+            {"results_dir": args.results_dir, "figures_dir": args.figures_dir, 
+             "wm_path": "checkpoints/world_model_best.pt"}),
         ("comparisons.world_model.horizon_error_comparison",     "plot_horizon_error",
             dict(results_dir=args.results_dir, figures_dir=args.figures_dir)),
         ("comparisons.world_model.eclipse_prediction_comparison","plot_eclipse_prediction",
