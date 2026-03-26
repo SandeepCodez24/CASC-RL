@@ -56,17 +56,17 @@ class CurriculumStage:
 
 
 CURRICULUM_STAGES: List[CurriculumStage] = [
-    CurriculumStage("single_nominal",     n_satellites=1,  n_episodes=1000,
+    CurriculumStage("single_nominal",     n_satellites=1,  n_episodes=500,
                     enable_eclipse=False, enable_degradation=False),
-    CurriculumStage("single_eclipse",     n_satellites=1,  n_episodes=2000,
+    CurriculumStage("single_eclipse",     n_satellites=1,  n_episodes=1000,
                     enable_eclipse=True,  enable_degradation=False),
-    CurriculumStage("three_nominal",      n_satellites=3,  n_episodes=2000,
+    CurriculumStage("three_nominal",      n_satellites=3,  n_episodes=1000,
                     enable_eclipse=True,  enable_degradation=False),
-    CurriculumStage("three_degradation",  n_satellites=3,  n_episodes=2000,
+    CurriculumStage("three_degradation",  n_satellites=3,  n_episodes=1000,
                     enable_eclipse=True,  enable_degradation=True),
-    CurriculumStage("six_stress",         n_satellites=6,  n_episodes=3000,
+    CurriculumStage("six_stress",         n_satellites=6,  n_episodes=1500,
                     enable_eclipse=True,  enable_degradation=True,  adversarial=False),
-    CurriculumStage("twelve_adversarial", n_satellites=12, n_episodes=5000,
+    CurriculumStage("twelve_adversarial", n_satellites=12, n_episodes=2500,
                     enable_eclipse=True,  enable_degradation=True,  adversarial=True),
 ]
 
@@ -127,35 +127,44 @@ def train_stage(
     )
 
     actors = [
-        ActorNetwork(obs_dim=obs_dim, future_dim=obs_dim, action_dim=action_dim)
+        ActorNetwork(state_dim=obs_dim, n_actions=action_dim, predict_k=5)
         for _ in range(n_sat)
     ]
     critic = CentralizedCriticNetwork(n_satellites=n_sat, state_dim=obs_dim)
-    reward_shaper = CooperativeRewardShaper(n_agents=n_sat, alpha=0.5, beta=0.5, gamma=0.2)
+    
+    # Custom reward shaper weights
+    from marl.cooperative_rewards import CoopRewardWeights
+    reward_shaper = CooperativeRewardShaper(
+        n_agents=n_sat,
+        weights=CoopRewardWeights(alpha=0.5, beta=0.5, gamma=0.2)
+    )
 
     trainer = MAPPOTrainer(
-        env=env,
+        n_agents=n_sat,
         actors=actors,
         critic=critic,
-        reward_shaper=reward_shaper,
-        n_satellites=n_sat,
+        env=env,
+        world_model=world_model,
         device=device,
-        rollout_length=args.rollout_length,
+        episode_length=args.episode_length,
         checkpoint_dir=args.checkpoint_dir,
     )
+    # Inject the shaper
+    trainer.shaper = reward_shaper
 
     # Load previous stage checkpoint if available
     if prev_checkpoint and os.path.exists(prev_checkpoint):
         logger.info(f"Loading previous stage weights from: {prev_checkpoint}")
-        trainer.load(prev_checkpoint)
+        trainer.load_checkpoint(prev_checkpoint)
 
     # Run episodes
     episode_rewards = []
     best_reward     = -float("inf")
-    stage_ckpt_path = os.path.join(args.checkpoint_dir, f"stage{stage_num}_{stage.name}.pt")
+    stage_suffix    = f"stage{stage_num}_{stage.name}"
 
     for episode in range(1, stage.n_episodes + 1):
-        ep_reward = trainer.run_episode(episode_length=args.episode_length)
+        # MAPPOTrainer uses train_episode() which returns (reward, al, cl, ent)
+        ep_reward, _, _, _ = trainer.train_episode()
         episode_rewards.append(ep_reward)
 
         if episode % args.log_every == 0:
@@ -164,8 +173,9 @@ def train_stage(
 
         if ep_reward > best_reward:
             best_reward = ep_reward
-            trainer.save(stage_ckpt_path)
+            trainer.save_checkpoint(suffix=stage_suffix)
 
+    stage_ckpt_path = os.path.join(args.checkpoint_dir, f"mappo_{stage_suffix}.pt")
     logger.success(
         f"Stage {stage_num} ({stage.name}) complete. "
         f"Best reward: {best_reward:.3f} | Checkpoint: {stage_ckpt_path}"

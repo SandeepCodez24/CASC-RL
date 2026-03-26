@@ -7,7 +7,7 @@ Requires a pre-trained world model checkpoint from train_world_model.py.
 
 Usage (from project root):
     python training/train_marl.py
-    python training/train_marl.py --n_satellites 3 --n_episodes 5000
+    python training/train_marl.py --n_satellites 3 --n_episodes 1000
     python training/train_marl.py --n_satellites 6 --world_model_path checkpoints/world_model_best.pt --device cuda
 """
 
@@ -41,8 +41,8 @@ from marl.cooperative_rewards import CooperativeRewardShaper
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Train CASC-RL MAPPO Agents")
-    p.add_argument("--n_satellites",        type=int,   default=3)
-    p.add_argument("--n_episodes",          type=int,   default=5000)
+    p.add_argument("--n_satellites",        type=int,   default=6)
+    p.add_argument("--n_episodes",          type=int,   default=1000)
     p.add_argument("--episode_length",      type=int,   default=1000,
                    help="Simulation steps per episode (default: 1000 = ~2.8 orbits)")
     p.add_argument("--rollout_length",      type=int,   default=200,

@@ -205,7 +205,7 @@ flowchart LR
         P2A["Load world_model_best.pt"]
         P2B["Build 3 × ActorNetwork\nBuild CentralizedCritic"]
         P2C["Build SatelliteAgents\n(actor + world model + safety gate)"]
-        P2D["MAPPOTrainer\n5000 episodes × 1000 steps"]
+        P2D["MAPPOTrainer\n1000 episodes × 1000 steps"]
         P2E["Every 200 steps:\nGAE → PPO clip × 10 epochs\nCritic MSE update"]
         P2F["Checkpoint\nmappo_best.pt\nmappo_final.pt"]
         P2A --> P2B --> P2C --> P2D --> P2E --> P2F
@@ -213,12 +213,12 @@ flowchart LR
 
     subgraph P3["PHASE 3\ncurriculum_training.py"]
         direction TB
-        S1["Stage 1: 1 sat\nno eclipse — 1,000 ep."]
-        S2["Stage 2: 1 sat\neclipse — 2,000 ep."]
-        S3["Stage 3: 3 sats\neclipse — 2,000 ep."]
-        S4["Stage 4: 3 sats\n+degradation — 2,000 ep."]
-        S5["Stage 5: 6 sats\nfull stress — 3,000 ep."]
-        S6["Stage 6: 12 sats\nadversarial — 5,000 ep."]
+        S1["Stage 1: 1 sat\nno eclipse — 500 ep."]
+        S2["Stage 2: 1 sat\neclipse — 1,000 ep."]
+        S3["Stage 3: 3 sats\neclipse — 1,000 ep."]
+        S4["Stage 4: 3 sats\n+degradation — 1,000 ep."]
+        S5["Stage 5: 6 sats\nfull stress — 1,500 ep."]
+        S6["Stage 6: 12 sats\nadversarial — 2,500 ep."]
         S1 --"checkpoint →"--> S2 --"checkpoint →"--> S3 --"checkpoint →"--> S4 --"checkpoint →"--> S5 --"checkpoint →"--> S6
     end
 
@@ -629,7 +629,7 @@ flowchart LR
     subgraph S1["Stage 1"]
         direction TB
         S1T["1 Satellite\nNo Eclipse\nNominal conditions"]
-        S1E["1,000 episodes\n1,000 steps/ep"]
+        S1E["500 episodes\n1,000 steps/ep"]
         S1C["stage1_single_nominal.pt"]
         S1T --> S1E --> S1C
     end
@@ -637,7 +637,7 @@ flowchart LR
     subgraph S2["Stage 2"]
         direction TB
         S2T["1 Satellite\nEclipse ON\nLearn eclipse strategy"]
-        S2E["2,000 episodes"]
+        S2E["1,000 episodes"]
         S2C["stage2_single_eclipse.pt"]
         S2T --> S2E --> S2C
     end
@@ -645,7 +645,7 @@ flowchart LR
     subgraph S3["Stage 3"]
         direction TB
         S3T["3 Satellites\nEclipse ON\nCollision avoidance\nBasic cooperation"]
-        S3E["2,000 episodes"]
+        S3E["1,000 episodes"]
         S3C["stage3_three_nominal.pt"]
         S3T --> S3E --> S3C
     end
@@ -653,7 +653,7 @@ flowchart LR
     subgraph S4["Stage 4"]
         direction TB
         S4T["3 Satellites\nEclipse + Degradation\nLearn SoH preservation\nLong-horizon planning"]
-        S4E["2,000 episodes"]
+        S4E["1,000 episodes"]
         S4C["stage4_three_degradation.pt"]
         S4T --> S4E --> S4C
     end
@@ -661,7 +661,7 @@ flowchart LR
     subgraph S5["Stage 5"]
         direction TB
         S5T["6 Satellites\nFull stress scenario\nCoordination critical\nHierarchical layer active"]
-        S5E["3,000 episodes"]
+        S5E["1,500 episodes"]
         S5C["stage5_six_stress.pt"]
         S5T --> S5E --> S5C
     end
@@ -669,7 +669,7 @@ flowchart LR
     subgraph S6["Stage 6"]
         direction TB
         S6T["12 Satellites\nAdversarial conditions\nAnomaly injection\nFull system stress"]
-        S6E["5,000 episodes"]
+        S6E["2,500 episodes"]
         S6C["stage6_twelve_adversarial.pt"]
         S6T --> S6E --> S6C
     end

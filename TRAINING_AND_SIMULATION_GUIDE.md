@@ -355,7 +355,7 @@ python training\train_marl.py
 2. Creates 3 `ActorNetwork` instances — one per satellite (LayerNorm MLP, 256 units)
 3. Creates 1 `CentralizedCriticNetwork` — takes concatenated global state (3 x 8 = 24 dims)
 4. Wraps each actor in a `SatelliteAgent` (integrates world model + actor + safety gate)
-5. Runs 5,000 episodes, each 1,000 steps (= ~2.8 full orbits at dt=10s)
+5. Runs 1,000 episodes, each 1,000 steps (= ~2.8 full orbits at dt=10s)
 6. Every 200 steps: computes GAE advantages, runs 10 PPO update epochs
 7. Saves best-episode checkpoint continuously
 
@@ -380,13 +380,13 @@ Step 5: Update centralized critic with MSE on computed returns
 
 **Expected terminal output:**
 ```
-Device: cpu | Satellites: 3 | Episodes: 5000
+Device: cpu | Satellites: 3 | Episodes: 1000
 Loaded world model from checkpoints/world_model_best.pt
-Episode    50/5000 | avg_reward=0.412 | elapsed=2.3min
-Episode   100/5000 | avg_reward=0.587 | elapsed=4.7min
-Episode   500/5000 | avg_reward=0.891 | elapsed=23.1min
+Episode    50/1000 | avg_reward=0.412 | elapsed=2.3min
+Episode   100/1000 | avg_reward=0.587 | elapsed=4.7min
+Episode   500/1000 | avg_reward=0.891 | elapsed=23.1min
 ...
-Episode  5000/5000 | avg_reward=1.243 | elapsed=48.2min
+Episode  1000/1000 | avg_reward=1.243 | elapsed=48.2min
 MARL training complete! Best episode reward: 1.389 | Total time: 48.2 min
 ```
 
@@ -426,7 +426,7 @@ python training\train_marl.py --save_every 200
 **All available flags:**
 ```
 --n_satellites       INT    Number of satellites (default: 3)
---n_episodes         INT    Training episodes (default: 5000)
+--n_episodes         INT    Training episodes (default: 1000)
 --episode_length     INT    Steps per episode (default: 1000)
 --rollout_length     INT    Steps before each PPO update (default: 200)
 --n_epochs           INT    PPO update epochs per rollout (default: 10)
@@ -455,7 +455,7 @@ Each stage loads the checkpoint from the previous stage, transferring learned sk
 Stage 1  ->  Stage 2  ->  Stage 3  ->  Stage 4  ->  Stage 5  ->  Stage 6
 1 sat        1 sat        3 sats       3 sats        6 sats       12 sats
 no eclipse   eclipse      eclipse      + degrad.     stress       adversarial
-1,000 ep.    2,000 ep.    2,000 ep.    2,000 ep.     3,000 ep.    5,000 ep.
+500 ep.      1,000 ep.    1,000 ep.    1,000 ep.     1,500 ep.    2,500 ep.
 ```
 
 **File:** `training/curriculum_training.py`
@@ -470,7 +470,7 @@ no eclipse   eclipse      eclipse      + degrad.     stress       adversarial
 python training\curriculum_training.py
 ```
 
-**Total training:** 15,000 episodes across 6 stages
+**Total training:** 7,500 episodes across 6 stages
 
 **Time estimate:**
 - CPU: 8–16 hours
